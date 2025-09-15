@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -49,21 +50,58 @@
 
     .input-group {
       margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
     }
 
     .input-group label {
       display: block;
-      margin-bottom: 5px;
+      min-width: 60px;
     }
 
     .input-group input {
-      width: 100%;
+      flex-grow: 1;
       padding: 10px;
       border: none;
       border-radius: 5px;
       background-color: var(--bg-color);
       color: var(--text-color);
       box-sizing: border-box;
+    }
+
+    .copy-btn-inline {
+      background-color: transparent;
+      border: 1px solid #007BFF;
+      color: #007BFF;
+      padding: 5px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .copy-btn-inline:hover {
+      background-color: #007BFF;
+      color: white;
+    }
+
+    .copy-msg {
+      position: absolute;
+      bottom: -18px;
+      right: 0;
+      font-size: 12px;
+      color: green;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      user-select: none;
+    }
+
+    .copy-msg.show {
+      opacity: 1;
     }
 
     .btn {
@@ -103,12 +141,17 @@
     }
 
     #resultadosCep ul {
-      padding-left: 20px;
+      padding-left: 0;
+      list-style: none;
     }
 
     #resultadosCep li {
-      margin-bottom: 5px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+
   </style>
 </head>
 <body>
@@ -131,16 +174,22 @@
     <div class="input-group">
       <label for="rua">Rua</label>
       <input type="text" id="rua" readonly />
+      <button class="copy-btn-inline" onclick="copiarTexto('rua', this)">Copiar</button>
+      <span class="copy-msg">Copiado!</span>
     </div>
 
     <div class="input-group">
       <label for="bairro">Bairro</label>
       <input type="text" id="bairro" readonly />
+      <button class="copy-btn-inline" onclick="copiarTexto('bairro', this)">Copiar</button>
+      <span class="copy-msg">Copiado!</span>
     </div>
 
     <div class="input-group">
       <label for="cidade">Cidade</label>
       <input type="text" id="cidade" readonly />
+      <button class="copy-btn-inline" onclick="copiarTexto('cidade', this)">Copiar</button>
+      <span class="copy-msg">Copiado!</span>
     </div>
 
     <div class="input-group">
@@ -161,17 +210,17 @@
 
     <div class="input-group">
       <label for="uf">UF (Estado)</label>
-      <input type="text" id="uf" placeholder="Ex: SP" maxlength="2" />
+      <input type="text" id="uf" placeholder="Ex: RS" maxlength="2" />
     </div>
 
     <div class="input-group">
       <label for="cidadeNome">Cidade</label>
-      <input type="text" id="cidadeNome" placeholder="Ex: Campinas" />
+      <input type="text" id="cidadeNome" placeholder="Ex: Caxias do Sul" />
     </div>
 
     <div class="input-group">
       <label for="logradouroBusca">Logradouro (Rua)</label>
-      <input type="text" id="logradouroBusca" placeholder="Ex: Av. Brasil" />
+      <input type="text" id="logradouroBusca" placeholder="Ex: Av. Júlio de Castilhos" />
     </div>
 
     <button class="btn" onclick="buscarCepsPorCidade()">Buscar CEPs</button>
@@ -180,7 +229,6 @@
   </div>
 
   <script>
-    // Máscara para o campo de CEP (formato 00000-000)
     function mascaraCep(input) {
       let cep = input.value.replace(/\D/g, '');
       if (cep.length > 5) {
@@ -198,6 +246,21 @@
         event.preventDefault();
         buscarCep();
       }
+    }
+
+    function copiarTexto(id, btn) {
+      const texto = document.getElementById(id).value;
+      if (!texto) return;
+      navigator.clipboard.writeText(texto).then(() => {
+        // Mostra a mensagem "Copiado!" próximo ao botão
+        const copyMsg = btn.nextElementSibling;
+        copyMsg.classList.add('show');
+        setTimeout(() => {
+          copyMsg.classList.remove('show');
+        }, 1500);
+      }).catch(() => {
+        alert('Erro ao copiar texto');
+      });
     }
 
     function buscarCep() {
@@ -240,10 +303,7 @@
       const url = `https://viacep.com.br/ws/${uf}/${encodeURIComponent(cidade)}/${encodeURIComponent(logradouro)}/json/`;
 
       fetch(url)
-        .then(res => {
-          if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
-          return res.json();
-        })
+        .then(res => res.json())
         .then(data => {
           resultadosDiv.innerHTML = '';
 
@@ -253,11 +313,29 @@
           }
 
           const ul = document.createElement('ul');
+
           data.forEach(item => {
             const li = document.createElement('li');
-            li.textContent = `${item.logradouro || '(sem rua)'}, Bairro: ${item.bairro}, CEP: ${item.cep}`;
+
+            const texto = `${item.logradouro || '(sem rua)'}, Bairro: ${item.bairro}, CEP: ${item.cep}`;
+            const span = document.createElement('span');
+            span.textContent = texto;
+
+            const btn = document.createElement('button');
+            btn.className = 'copy-btn-inline';
+            btn.textContent = 'Copiar';
+            btn.onclick = () => {
+              navigator.clipboard.writeText(texto).then(() => {
+                btn.textContent = 'Copiado!';
+                setTimeout(() => btn.textContent = 'Copiar', 1500);
+              });
+            };
+
+            li.appendChild(span);
+            li.appendChild(btn);
             ul.appendChild(li);
           });
+
           resultadosDiv.appendChild(ul);
         })
         .catch(err => {
